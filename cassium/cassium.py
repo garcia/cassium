@@ -18,7 +18,7 @@ from irclib import nm_to_n
 # Attempt to get configuration from the current directory
 try:
     import config as cfg
-except ImportError:
+except:
     cfg = None
 
 class Cassium(SingleServerIRCBot):
@@ -29,6 +29,7 @@ class Cassium(SingleServerIRCBot):
 
     def __init__(self, config=None):
         # config must be given if the import above failed
+        global cfg
         if config: cfg = config
         elif not cfg: raise AttributeError("no configuration found")
         # initialize the IRC bot
@@ -41,7 +42,7 @@ class Cassium(SingleServerIRCBot):
     def load_plugin(self, plugin):
         """Loads or reloads a plugin."""
         # Import the plugin
-        this_plugin = __import__(plugin)
+        this_plugin = __import__('plugins.' + plugin)
         # Search for an existing copy of the plugin
         for i, plugin in enumerate(self.plugins):
             if this_plugin.__name__ == plugin.__name__:
@@ -52,3 +53,7 @@ class Cassium(SingleServerIRCBot):
         else:
             self.plugins.append(this_plugin)
             print("Imported " + this_plugin.__name__)
+
+
+if __name__ == '__main__':
+    Cassium()
