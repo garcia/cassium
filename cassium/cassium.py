@@ -36,6 +36,8 @@ class Cassium(SingleServerIRCBot):
         SingleServerIRCBot.__init__(self, [(cfg.server, cfg.port)], cfg.nick,
             cfg.realname)
         # import plugins
+        # TODO: deprecate 'autoload' as a configuration feature and simply load
+        # everything found under plugins/
         for plugin in cfg.autoload:
             self.load_plugin(plugin)
 
@@ -54,6 +56,11 @@ class Cassium(SingleServerIRCBot):
             self.plugins.append(this_plugin)
             print("Imported " + this_plugin.__name__)
 
+    def on_nicknameinuse(self, c, e):
+        c.nick(c.get_nickname() + "_")
 
-if __name__ == '__main__':
-    Cassium()
+    def on_welcome(self, c, e):
+        if hasattr(cfg, 'password'):
+                self.connection.privmsg('NickServ', 'IDENTIFY ' + cfg.password)
+        for channel in cfg.channels:
+            c.join(channel)

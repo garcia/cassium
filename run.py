@@ -3,7 +3,7 @@ from cassium.cassium import Cassium
 
 
 def main():
-    Cassium()
+    Cassium().start()
 
 
 if __name__ == "__main__":
