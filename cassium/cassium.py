@@ -20,24 +20,26 @@ try:
     import config as cfg
 except:
     cfg = None
+global cfg
 
 class Cassium(SingleServerIRCBot):
-    """
+    """Cassium's main class.
+    
+    Takes a single argument, an imported configuration file. This is
+    unnecessary if config.py is present in the current working directory.
+
     """
 
     plugins = []
 
     def __init__(self, config=None):
         # config must be given if the import above failed
-        global cfg
         if config: cfg = config
         elif not cfg: raise AttributeError("no configuration found")
         # initialize the IRC bot
         SingleServerIRCBot.__init__(self, [(cfg.server, cfg.port)], cfg.nick,
             cfg.realname)
         # import plugins
-        # TODO: deprecate 'autoload' as a configuration feature and simply load
-        # everything found under plugins/
         for plugin in cfg.autoload:
             self.load_plugin(plugin)
 
