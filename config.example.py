@@ -5,6 +5,3 @@ realname = 'A Cassium IRC Bot'
 channels = [
     '#cassium',
 ]
-autoload = [
-    'hello',
-]
