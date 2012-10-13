@@ -26,12 +26,13 @@ class CassiumPlugin(object):
 
 class Query(object):
 
-    def __init__(self, user, channel, message):
+    def __init__(self, config, user, channel, message):
         # Raises ValueError on server messages (user string has no '!')
         self.nick, self.host = user.split('!', 1)
         self.channel = channel
         self.message = message
         self.words = message.split(' ')
+        self.config = config
 
 
 class Response(object):

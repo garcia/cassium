@@ -101,7 +101,7 @@ class Cassium(IRCClient):
     def privmsg(self, user, channel, message):
         # See the comment in Query on ValueError
         try:
-            query = Query(user, channel, message)
+            query = Query(config, user, channel, message)
         except ValueError:
             return
         response = Response(user, channel, message)
