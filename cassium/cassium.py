@@ -48,7 +48,7 @@ class Cassium(IRCClient):
     
     def load_plugins_recursively(self, directory):
         plugins = []
-        for node in glob.iglob(directory + '*'):
+        for node in sorted(glob.iglob(directory + '*')):
             if os.path.isdir(node):
                 self.load_plugins_recursively(node + '/')
             elif node.endswith('.py') and '__init__' not in node:
