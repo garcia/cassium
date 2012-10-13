@@ -1,12 +1,9 @@
 from __future__ import print_function
 
 import glob
-import imp
 import os
 import re
-import sys
-import traceback
-from threading import Timer
+from inspect import isclass
 try:
     import cPickle as pickle
 except ImportError:
@@ -69,36 +66,32 @@ class Cassium(IRCClient):
         for component in path.split('.')[1:]:
             this_plugin = getattr(this_plugin, component)
         # If this is the plugin class, load it now
-        try:
-            if issubclass(this_plugin, CassiumPlugin):
-                return self.load_plugin(plugin=this_plugin)
-        # If this_plugin wasn't a class, issubclass will complain. We don't care.
-        except TypeError: pass
+        if isclass(this_plugin) and issubclass(this_plugin, CassiumPlugin):
+            return self.load_plugin(plugin=this_plugin())
         # Otherwise, find subclasses of CassiumPlugin and load them
         loaded_nothing = True
         for attr in dir(this_plugin):
             this_attr = getattr(this_plugin, attr)
-            try:
-                if (issubclass(this_attr, CassiumPlugin) and \
-                        this_attr is not CassiumPlugin):
-                    loaded_nothing = False
-                    self.load_plugin(plugin=this_attr)
-            except TypeError: pass
+            if (isclass(this_attr) and
+                    issubclass(this_attr, CassiumPlugin) and
+                    this_attr is not CassiumPlugin):
+                loaded_nothing = False
+                self.load_plugin(plugin=this_attr())
         if loaded_nothing:
-            raise TypeError('No plugins were found in the given module')
+            raise TypeError('No plugins were found in the module ' + path)
 
     def load_plugin(self, plugin):
-        """Loads or reloads a plugin."""
+        """Loads or reloads a plugin instance."""
+        name = plugin.__class__.__name__
         # Search for an existing copy of the plugin
         for i, existing_plugin in enumerate(self.plugins):
-            if plugin.__name__ == existing_plugin.__class__.__name__:
-                self.plugins[i] = plugin()
-                print('Reloaded ' + plugin.__name__)
-                break
+            if name == existing_plugin.__class__.__name__:
+                self.plugins[i] = plugin
+                print('Reloaded ' + name)
+                return
         # No existing copy found
-        else:
-            self.plugins.append(plugin())
-            print('Imported ' + plugin.__name__)
+        self.plugins.append(plugin)
+        print('Imported ' + name)
 
     def signedOn(self):
         if hasattr(config, 'password'):
