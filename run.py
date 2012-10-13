@@ -1,9 +1,14 @@
 #!/usr/bin/env python
-from cassium.cassium import Cassium
+from twisted.internet import reactor
 
+from cassium.cassium import Cassium, CassiumFactory
+#import config
 
 def main():
-    Cassium().start()
+    factory = CassiumFactory()
+    #reactor.connectTCP(config.server, config.port, factory)
+    reactor.connectTCP('localhost', 6667, factory)
+    reactor.run()
 
 
 if __name__ == "__main__":

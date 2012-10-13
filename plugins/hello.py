@@ -1,4 +1,4 @@
 triggers = [r'^`hello$']
 
-def run(query):
+def run(user, channel, message):
     return "Hello, world!"
