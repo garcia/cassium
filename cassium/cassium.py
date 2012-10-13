@@ -62,7 +62,7 @@ class Cassium(IRCClient):
         plugin is loaded on its own.
         
         """
-        this_plugin = __import__(path)
+        this_plugin = reload(__import__(path)) # TODO: ugly
         # Navigate to the given path
         for component in path.split('.')[1:]:
             this_plugin = getattr(this_plugin, component)
@@ -79,7 +79,7 @@ class Cassium(IRCClient):
                 loaded_nothing = False
                 self.load_plugin(plugin=this_attr())
         if loaded_nothing:
-            raise TypeError('No plugins were found in the module ' + path)
+            print('Warning: no plugins were found in the module ' + path)
 
     def load_plugin(self, plugin):
         """Loads or reloads a plugin instance."""
@@ -121,6 +121,8 @@ class Cassium(IRCClient):
         # And the rest
         if response._nick:
             self.setNick(response._nick)
+        for path in response._load:
+            self.load_plugins_from_path(path)
 
 class CassiumFactory(protocol.ClientFactory):
     """A Twisted factory that instantiates or reinstantiates Cassium."""

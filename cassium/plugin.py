@@ -38,15 +38,16 @@ class Response(object):
         self._message = message
 
         # Initialize response values
-        self._msg = []       # Duplicate messages permitted
-        self._join = set()   # Only makes sense to join a channel once
-        self._leave = set()  #   same goes for leaving
-        self._kick = {}      # Only one user kick per channel
-        self._topic = {}     # Only one topic set per channel
-        self._mode = []      # Too complex to restrict meaningfully
-        self._notice = []    # Same idea as _messages
-        self._nick = None    # You're either changing it or you're not
-        self._me = []        # Same idea as _messages
+        self._msg = []      # Duplicate messages permitted
+        self._join = set()  # Only makes sense to join a channel once at a time
+        self._leave = set() # Same idea as _join
+        self._kick = {}     # Only one user kick per channel
+        self._topic = {}    # Same idea as _kick
+        self._mode = []     # Too complex to restrict meaningfully
+        self._notice = []   # Same idea as _messages
+        self._nick = None   # You're either changing it or you're not
+        self._me = []       # Same idea as _messages
+        self._load = set()  # Same idea as _join
 
     def _target(self, target):
         return target or self._channel or self._user
@@ -80,3 +81,6 @@ class Response(object):
 
     def me(self, channel, action):
         self._me.append((channel, action))
+
+    def load(self, path):
+        self._load.add(path)
