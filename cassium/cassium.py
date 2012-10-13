@@ -62,14 +62,12 @@ class Cassium(IRCClient):
         plugin is loaded on its own.
         
         """
-        this_plugin = reload(__import__(path)) # TODO: ugly
+        this_plugin = __import__(path)
         # Navigate to the given path
         for component in path.split('.')[1:]:
             this_plugin = getattr(this_plugin, component)
-        # If this is the plugin class, load it now
-        if isclass(this_plugin) and issubclass(this_plugin, CassiumPlugin):
-            return self.load_plugin(plugin=this_plugin())
-        # Otherwise, find subclasses of CassiumPlugin and load them
+        # Find subclasses of CassiumPlugin and load them
+        reload(this_plugin)
         loaded_nothing = True
         for attr in dir(this_plugin):
             this_attr = getattr(this_plugin, attr)
