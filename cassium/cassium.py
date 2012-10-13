@@ -15,6 +15,8 @@ except ImportError:
 from twisted.internet import protocol, reactor
 from twisted.words.protocols.irc import IRCClient
 
+from plugin import CassiumPlugin
+
 # Attempt to get configuration from the current directory
 try:
     import config
@@ -33,15 +35,15 @@ class Cassium(IRCClient):
 
     def __init__(self, config_=None):
         global config
-        # config must be given if the import above failed
+        # Config must be given if the import above failed
         if config_: config = config_
         elif not config: raise AttributeError('no configuration found')
-        # set up for IRC
+        # Set up for IRC
         self.nickname = config.nick
         self.realname = config.realname
-        self.username = "A Cassium IRC Bot"
-        self.versionName = "Cassium"
-        # import plugins
+        self.username = 'A Cassium IRC Bot'
+        self.versionName = 'Cassium'
+        # Import plugins
         self.load_plugins_recursively('plugins/')
     
     def load_plugins_recursively(self, directory):
@@ -52,25 +54,51 @@ class Cassium(IRCClient):
             elif node.endswith('.py') and '__init__' not in node:
                 # Convert filesystem path to dot-delimited path
                 path = os.path.splitext(node)[0].replace(os.path.sep, '.')
-                self.load_plugin(path)
+                self.load_plugins_from_path(path)
+
+    def load_plugins_from_path(self, path):
+        """Loads or reloads the plugin(s) at the given path.
+        
+        If the path points to a module, all plugins in the given module are
+        loaded. If the path points to a specific plugin within a module, that
+        plugin is loaded on its own.
+        
+        """
+        this_plugin = __import__(path)
+        # Navigate to the given path
+        for component in path.split('.')[1:]:
+            this_plugin = getattr(this_plugin, component)
+        # If this is the plugin class, load it now
+        try:
+            if issubclass(this_plugin, CassiumPlugin):
+                return self.load_plugin(plugin=this_plugin)
+        # If this_plugin wasn't a class, issubclass will complain. We don't care.
+        except TypeError: pass
+        # Otherwise, find subclasses of CassiumPlugin and load them
+        loaded_nothing = True
+        for attr in dir(this_plugin):
+            this_attr = getattr(this_plugin, attr)
+            try:
+                if (issubclass(this_attr, CassiumPlugin) and \
+                        this_attr is not CassiumPlugin):
+                    loaded_nothing = False
+                    self.load_plugin(plugin=this_attr)
+            except TypeError: pass
+        if loaded_nothing:
+            raise TypeError('No plugins were found in the given module')
 
     def load_plugin(self, plugin):
         """Loads or reloads a plugin."""
-        # Import the plugin
-        this_plugin = __import__(plugin)
-        for component in plugin.split('.')[1:]:
-            this_plugin = getattr(this_plugin, component)
-
         # Search for an existing copy of the plugin
-        for i, plugin in enumerate(self.plugins):
-            if this_plugin.__name__ == plugin.__name__:
-                self.plugins[i] = this_plugin
-                print("Reloaded " + this_plugin.__name__)
+        for i, existing_plugin in enumerate(self.plugins):
+            if plugin.__name__ == existing_plugin.__class__.__name__:
+                self.plugins[i] = plugin()
+                print('Reloaded ' + plugin.__name__)
                 break
         # No existing copy found
         else:
-            self.plugins.append(this_plugin)
-            print("Imported " + this_plugin.__name__)
+            self.plugins.append(plugin())
+            print('Imported ' + plugin.__name__)
 
     def signedOn(self):
         if hasattr(config, 'password'):
@@ -83,7 +111,7 @@ class Cassium(IRCClient):
             for trigger in plugin.triggers:
                 if re.match(trigger, message):
                     self.msg(channel or user,
-                        self.trigger.run(user, channel, message))
+                        plugin.run(user, channel, message))
 
 class CassiumFactory(protocol.ClientFactory):
     """A Twisted factory that instantiates or reinstantiates Cassium."""

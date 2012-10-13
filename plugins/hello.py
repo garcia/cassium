@@ -1,4 +1,8 @@
-triggers = [r'^`hello$']
+from cassium.plugin import CassiumPlugin
 
-def run(user, channel, message):
-    return "Hello, world!"
+class HelloWorld(CassiumPlugin):
+    
+    triggers = [r'^`hello$']
+
+    def run(self, user, channel, message):
+        return "Hello, world!"
