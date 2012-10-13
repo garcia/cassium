@@ -99,12 +99,17 @@ class Cassium(IRCClient):
             self.join(channel)
 
     def privmsg(self, user, channel, message):
+        # See the comment in Query on ValueError
+        try:
+            query = Query(user, channel, message)
+        except ValueError:
+            return
         response = Response(user, channel, message)
         # Check each plugin's triggers
         for plugin in self.plugins:
             for trigger in plugin.triggers:
                 if re.match(trigger, message):
-                    plugin.run(response, user, channel, message)
+                    plugin.run(query, response)
         # Process list- and set-based responses
         for response_type in ('msg', 'join', 'leave', 'mode', 'notice', 'me'):
             # i.e. for action in response._msg:

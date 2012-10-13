@@ -1,6 +1,6 @@
 import re
 
-__all__ = ['CassiumPlugin', 'Response']
+__all__ = ['CassiumPlugin', 'Query', 'Response']
 
 class CassiumPlugin(object):
     
@@ -22,6 +22,17 @@ class CassiumPlugin(object):
 
     def __str__(self):
         return '<CassiumPlugin %s>' % self.__class____name__
+
+
+class Query(object):
+
+    def __init__(self, user, channel, message):
+        # Raises ValueError on server messages (user string has no '!')
+        self.nick, self.host = user.split('!', 1)
+        self.channel = channel
+        self.message = message
+        self.words = message.split(' ')
+
 
 class Response(object):
     """An object that is passed among all triggered plugins for a message.
