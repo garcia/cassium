@@ -105,27 +105,32 @@ class Cassium(IRCClient):
         except ValueError:
             return
         response = Response(user, channel, message)
-        # Check each plugin's triggers
-        for plugin in self.plugins:
-            for trigger in plugin.triggers:
-                if re.match(trigger, message):
-                    plugin.run(query, response)
-        # Process list- and set-based responses
-        for response_type in ('msg', 'join', 'leave', 'mode', 'notice', 'me'):
-            # i.e. for action in response._msg:
-            for action in getattr(response, '_' + response_type):
-                # i.e. self.msg(*action)
-                getattr(self, response_type)(*action)
-        # Process dict-based responses
-        for channel_and_name, reason in response._kick.iteritems():
-            self.kick(*channel_and_name + (reason,))
-        for channel, topic in response._topic.iteritems():
-            self.topic(channel, topic)
-        # And the rest
-        if response._nick:
-            self.setNick(response._nick)
-        for path in response._load:
-            self.load_plugins_from_path(path)
+        try:
+            # Check each plugin's triggers
+            for plugin in self.plugins:
+                for trigger in plugin.triggers:
+                    if re.match(trigger, message):
+                        plugin.run(query, response)
+            # Attempt to load requested plugins first
+            for path in response._load:
+                self.load_plugins_from_path(path)
+            # Process dict-based responses
+            for channel_and_name, reason in response._kick.iteritems():
+                self.kick(*channel_and_name + (reason,))
+            for channel, topic in response._topic.iteritems():
+                self.topic(channel, topic)
+            # Nick change
+            if response._nick:
+                self.setNick(response._nick)
+            # Process list- and set-based responses
+            for response_type in ('join', 'leave', 'mode', 'notice', 'me', 'msg'):
+                # i.e. for action in response._msg:
+                for action in getattr(response, '_' + response_type):
+                    # i.e. self.msg(*action)
+                    getattr(self, response_type)(*action)
+        except Exception:
+            self.msg(channel or user, traceback.format_exc().splitlines()[-1])
+            traceback.print_exc()
 
 class CassiumFactory(protocol.ClientFactory):
     """A Twisted factory that instantiates or reinstantiates Cassium."""
