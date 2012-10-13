@@ -12,7 +12,8 @@ except ImportError:
 from twisted.internet import protocol, reactor
 from twisted.words.protocols.irc import IRCClient
 
-from plugin import CassiumPlugin
+# Why isn't this particular import relative to run.py's cwd?
+from plugin import *
 
 # Attempt to get configuration from the current directory
 try:
@@ -100,11 +101,26 @@ class Cassium(IRCClient):
             self.join(channel)
 
     def privmsg(self, user, channel, message):
+        response = Response(user, channel, message)
+        # Check each plugin's triggers
         for plugin in self.plugins:
             for trigger in plugin.triggers:
                 if re.match(trigger, message):
-                    self.msg(channel or user,
-                        plugin.run(user, channel, message))
+                    plugin.run(response, user, channel, message)
+        # Process list- and set-based responses
+        for response_type in ('msg', 'join', 'leave', 'mode', 'notice', 'me'):
+            # i.e. for action in response._msg:
+            for action in getattr(response, '_' + response_type):
+                # i.e. self.msg(*action)
+                getattr(self, response_type)(*action)
+        # Process dict-based responses
+        for channel_and_name, reason in response._kick.iteritems():
+            self.kick(*channel_and_name + (reason,))
+        for channel, topic in response._topic.iteritems():
+            self.topic(channel, topic)
+        # And the rest
+        if response._nick:
+            self.setNick(response._nick)
 
 class CassiumFactory(protocol.ClientFactory):
     """A Twisted factory that instantiates or reinstantiates Cassium."""

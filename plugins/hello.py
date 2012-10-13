@@ -4,5 +4,5 @@ class HelloWorld(CassiumPlugin):
     
     triggers = [r'^`hello$']
 
-    def run(self, user, channel, message):
-        return "Hello, world!"
+    def run(self, response, user, channel, message):
+        response.msg("Hello, world!")

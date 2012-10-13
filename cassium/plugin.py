@@ -31,20 +31,22 @@ class Response(object):
     plugin then modifies that object by calling it 
 
     """
-    _msg = []       # Duplicate messages permitted
-    _join = set()   # Only makes sense to join a channel once
-    _leave = set()  #   same goes for leaving
-    _kick = {}      # Only one user kick per channel
-    _topic = {}     # Only one topic set per channel
-    _mode = []      # Too complex to restrict meaningfully
-    _notice = []    # Same idea as _messages
-    _nick = None    # You're either changing it or you're not
-    _me = []        # Same idea as _messages
 
     def __init__(self, user, channel, message):
         self._user = user
         self._channel = channel
         self._message = message
+
+        # Initialize response values
+        self._msg = []       # Duplicate messages permitted
+        self._join = set()   # Only makes sense to join a channel once
+        self._leave = set()  #   same goes for leaving
+        self._kick = {}      # Only one user kick per channel
+        self._topic = {}     # Only one topic set per channel
+        self._mode = []      # Too complex to restrict meaningfully
+        self._notice = []    # Same idea as _messages
+        self._nick = None    # You're either changing it or you're not
+        self._me = []        # Same idea as _messages
 
     def _target(self, target):
         return target or self._channel or self._user
