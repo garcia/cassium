@@ -1,9 +1,9 @@
 import re
 
 # Do not expose imported modules
-__all__ = ['CassiumPlugin', 'Query', 'Response']
+__all__ = ['Plugin', 'Query', 'Response']
 
-class CassiumPlugin(object):
+class Plugin(object):
     """The base class for all Cassium plugins.
 
     Subclasses must override the run() method. __init__ may also be overridden

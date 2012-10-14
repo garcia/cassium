@@ -72,14 +72,13 @@ class Cassium(IRCClient):
         # Navigate to the given path
         for component in path.split('.')[1:]:
             this_plugin = getattr(this_plugin, component)
-        # Find subclasses of CassiumPlugin and load them
+        # Find subclasses of Plugin and load them
         reload(this_plugin)
         loaded_nothing = True
         for attr in dir(this_plugin):
             this_attr = getattr(this_plugin, attr)
-            if (isclass(this_attr) and
-                    issubclass(this_attr, CassiumPlugin) and
-                    this_attr is not CassiumPlugin):
+            if (isclass(this_attr) and issubclass(this_attr, Plugin) and
+                    this_attr is not Plugin):
                 loaded_nothing = False
                 self.load_plugin(plugin=this_attr())
         if loaded_nothing:

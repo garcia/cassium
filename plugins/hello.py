@@ -1,6 +1,6 @@
-from cassium.plugin import CassiumPlugin
+from cassium.plugin import Plugin
 
-class HelloWorld(CassiumPlugin):
+class HelloWorld(Plugin):
     
     triggers = [r'^`hello$']
 

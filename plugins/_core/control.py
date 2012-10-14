@@ -1,6 +1,6 @@
-from cassium.plugin import CassiumPlugin
+from cassium.plugin import Plugin
 
-class Control(CassiumPlugin):
+class Control(Plugin):
 
     triggers = [
         '^`sudo (join|leave|nick|import)',
