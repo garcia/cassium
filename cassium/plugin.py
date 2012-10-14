@@ -1,9 +1,17 @@
 import re
 
+# Do not expose imported modules
 __all__ = ['CassiumPlugin', 'Query', 'Response']
 
 class CassiumPlugin(object):
-    
+    """The base class for all Cassium plugins.
+
+    Subclasses must override the run() method. __init__ may also be overridden
+    if necessary, but it would be advisable to call the superclass's __init__
+    as well.
+
+    """
+
     triggers = []
 
     def __init__(self):
@@ -25,14 +33,44 @@ class CassiumPlugin(object):
 
 
 class Query(object):
+    """An object that is passed among all triggered plugins for a message.
+    
+    Query objects have the following read-only properties:
+        
+        * nick: the nickname of the user that sent the privmsg
+        * host: the host of the user
+        * channel: the channel in which the privmsg was sent
+        * message: the message string
+        * words: the message as a list of space-separated words
+        * config: Cassium's configuration module
+    
+    """
 
     def __init__(self, config, user, channel, message):
         # Raises ValueError on server messages (user string has no '!')
-        self.nick, self.host = user.split('!', 1)
-        self.channel = channel
-        self.message = message
-        self.words = message.split(' ')
-        self.config = config
+        self._nick, self._host = user.split('!', 1)
+        self._channel = channel
+        self._message = message
+        self._words = message.split(' ')
+        self._config = config
+
+    @property
+    def nick(self): return self._nick
+
+    @property
+    def host(self): return self._host
+
+    @property
+    def channel(self): return self._channel
+
+    @property
+    def message(self): return self._message
+
+    @property
+    def words(self): return self._words
+
+    @property
+    def config(self): return self._config
 
 
 class Response(object):
@@ -40,7 +78,7 @@ class Response(object):
 
     More specifically, a Response object is initialized with the message
     information and passed as an argument to each triggered plugin. The
-    plugin then modifies that object by calling it 
+    plugin then responds using the given methods.
 
     """
 

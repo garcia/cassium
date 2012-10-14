@@ -22,17 +22,21 @@ try:
 except ImportError:
     config = None
 
-class Cassium(IRCClient):
-    """Cassium's main class.
-    
-    Takes a single argument, an imported configuration file. This is
-    unnecessary if config.py is present in the current working directory.
+# Do not expose imported modules
+__all__ = ['Cassium', 'CassiumFactory']
 
-    """
+class Cassium(IRCClient):
+    """Cassium's main class."""
 
     plugins = []
 
     def __init__(self, config_=None):
+        """Initialize Cassium.
+        
+        If there is no configuration module in the current working directory,
+        one must be passed as the sole argument to the constructor.
+
+        """
         global config
         # Config must be given if the import above failed
         if config_: config = config_
@@ -46,6 +50,7 @@ class Cassium(IRCClient):
         self.load_plugins_recursively('plugins/')
     
     def load_plugins_recursively(self, directory):
+        """Recursively loads or reloads all plugins in the given directory."""
         plugins = []
         for node in sorted(glob.iglob(directory + '*')):
             if os.path.isdir(node):
@@ -94,12 +99,14 @@ class Cassium(IRCClient):
         print('Imported ' + name)
 
     def signedOn(self):
+        """Called upon successfully connecting to the IRC server."""
         if hasattr(config, 'password'):
                 self.msg('NickServ', 'IDENTIFY ' + config.password)
         for channel in config.channels:
             self.join(channel)
 
     def privmsg(self, user, channel, message):
+        """Called upon receipt of a message from a user or channel."""
         # See the comment in Query on ValueError
         try:
             query = Query(config, user, channel, message)
