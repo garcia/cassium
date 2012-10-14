@@ -114,7 +114,7 @@ class Cassium(IRCClient):
                         plugin.run(query, response)
             # Attempt to load requested plugins first
             for path in response._load:
-                self.load_plugins_from_path('plugins.' + path)
+                self.load_plugins_from_path(path)
             # Process dict-based responses
             for channel_and_name, reason in response._kick.iteritems():
                 self.kick(*channel_and_name + (reason,))
