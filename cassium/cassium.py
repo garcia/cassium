@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import glob
 import os
+import pprint
 import re
 import traceback
 from inspect import isclass
@@ -133,11 +134,15 @@ class Cassium(IRCClient):
             for response_type in ('join', 'leave', 'mode', 'notice', 'me', 'msg'):
                 # i.e. for action in response._msg:
                 for action in getattr(response, '_' + response_type):
+                    # unicode fix
+                    if response_type == 'msg':
+                        action = (action[0], action[1].encode('UTF-8'))
                     # i.e. self.msg(*action)
                     getattr(self, response_type)(*action)
         except Exception:
             self.msg(channel or user, traceback.format_exc().splitlines()[-1])
             traceback.print_exc()
+            pprint.pprint(vars(response))
 
 class CassiumFactory(protocol.ClientFactory):
     """A Twisted factory that instantiates or reinstantiates Cassium."""
