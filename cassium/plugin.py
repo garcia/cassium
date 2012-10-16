@@ -82,10 +82,8 @@ class Response(object):
 
     """
 
-    def __init__(self, user, channel, message):
-        self._user = user
-        self._channel = channel
-        self._message = message
+    def __init__(self, user, channel):
+        self._defaulttarget = channel or user
 
         # Initialize response values
         self._msg = []      # Duplicate messages permitted
@@ -97,10 +95,9 @@ class Response(object):
         self._notice = []   # Same idea as _messages
         self._nick = None   # You're either changing it or you're not
         self._me = []       # Same idea as _messages
-        self._load = set()  # Same idea as _join
 
     def _target(self, target):
-        return target or self._channel or self._user
+        return target or self._defaulttarget
 
     def msg(self, message, target=None):
         self._msg.append((self._target(target), message))
@@ -131,6 +128,3 @@ class Response(object):
 
     def me(self, channel, action):
         self._me.append((channel, action))
-
-    def load(self, path):
-        self._load.add(path)

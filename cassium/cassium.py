@@ -4,6 +4,7 @@ import glob
 import os
 import pprint
 import re
+import sys
 import traceback
 from inspect import isclass
 try:
@@ -49,6 +50,7 @@ class Cassium(IRCClient):
         self.versionName = 'Cassium'
         # Import plugins
         self.load_plugins_recursively('plugins/')
+        self.builtin_plugins = [Cassium.Control()]
     
     def load_plugins_recursively(self, directory):
         """Recursively loads or reloads all plugins in the given directory."""
@@ -112,16 +114,20 @@ class Cassium(IRCClient):
             query = Query(config, user, channel, message)
         except ValueError:
             return
-        response = Response(user, channel, message)
+        response = Response(user, channel)
         try:
+            # Check builtin triggers
+            for plugin in self.builtin_plugins:
+                for trigger in plugin.triggers:
+                    if re.match(trigger, message):
+                        # Note that builtin plugins receive 'self'
+                        # instead of 'response' and also return immediately
+                        return plugin.run(query, self)
             # Check each plugin's triggers
             for plugin in self.plugins:
                 for trigger in plugin.triggers:
                     if re.match(trigger, message):
                         plugin.run(query, response)
-            # Attempt to load requested plugins first
-            for path in response._load:
-                self.load_plugins_from_path(path)
             # Process dict-based responses
             for channel_and_name, reason in response._kick.iteritems():
                 self.kick(*channel_and_name + (reason,))
@@ -134,7 +140,7 @@ class Cassium(IRCClient):
             for response_type in ('join', 'leave', 'mode', 'notice', 'me', 'msg'):
                 # i.e. for action in response._msg:
                 for action in getattr(response, '_' + response_type):
-                    # unicode fix
+                    # unicode fix (might be necessary for other response types?)
                     if response_type == 'msg':
                         action = (action[0], action[1].encode('UTF-8'))
                     # i.e. self.msg(*action)
@@ -143,6 +149,32 @@ class Cassium(IRCClient):
             self.msg(channel or user, traceback.format_exc().splitlines()[-1])
             traceback.print_exc()
             pprint.pprint(vars(response))
+
+    class Control(Plugin):
+
+        triggers = [
+            '^`(join|leave|nick|import|reconnect|restart)',
+        ]
+
+        def run(self, query, cassium):
+            if query.nick not in query.config.admins:
+                return cassium.msg(query.channel or query.user,
+                    'You are not permitted to use this command.')
+            if query.words[0] == '`join':
+                cassium.join(query.words[1])
+            elif query.words[0] == '`leave':
+                cassium.leave(query.words[1])
+            elif query.words[0] == '`nick':
+                cassium.setNick(query.words[1])
+            elif query.words[0] == '`import':
+                cassium.load_plugins_from_path('plugins.' + query.words[1])
+                cassium.msg(query.channel or query.user,
+                    'Loaded ' + query.words[1] + '.')
+            elif query.words[0] == '`reconnect':
+                cassium.quit()
+            elif query.words[0] == '`restart':
+                reactor.stop()
+                os.execvp('./run.py', sys.argv)
 
 class CassiumFactory(protocol.ClientFactory):
     """A Twisted factory that instantiates or reinstantiates Cassium."""
