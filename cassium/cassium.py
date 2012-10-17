@@ -151,6 +151,7 @@ class Cassium(IRCClient):
             pprint.pprint(vars(response))
 
     class Control(Plugin):
+        """Internal plugin used to provide admins with basic control."""
 
         triggers = [
             '^`(join|leave|nick|import|reconnect|restart)',
@@ -174,6 +175,7 @@ class Cassium(IRCClient):
                 cassium.quit()
             elif query.words[0] == '`restart':
                 reactor.stop()
+                print "===== RESTARTING ====="
                 os.execvp('./run.py', sys.argv)
 
 class CassiumFactory(protocol.ClientFactory):
