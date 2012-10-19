@@ -25,36 +25,18 @@ class Query(object):
     """
 
     def __init__(self, config, signaltype, **kwargs):
-        self._config = config
-        self._type = signaltype
+        self.config = config
+        self.type = signaltype
         for k, v in kwargs.items():
-            # Translates to e.g. self._message = kwargs['message']
-            setattr(self, '_' + k, v)
+            # Translates to e.g. self.message = kwargs['message']
+            setattr(self, k, v)
             if k == 'message':
-                self._words = v.split(' ')
+                self.words = v.split(' ')
             elif k == 'user':
                 try:
-                    self._nick, self._host = v.split('!', 1)
+                    self.nick, self.host = v.split('!', 1)
                 except:
-                    self._nick = v
-
-    @property
-    def nick(self): return self._nick
-
-    @property
-    def host(self): return self._host
-
-    @property
-    def channel(self): return self._channel
-
-    @property
-    def message(self): return self._message
-
-    @property
-    def words(self): return self._words
-
-    @property
-    def config(self): return self._config
+                    self.nick = v
 
 
 class Response(object):
