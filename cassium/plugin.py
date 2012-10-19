@@ -26,9 +26,6 @@ class Plugin(object):
             for i, trigger in enumerate(self.triggers[signaltype]):
                 self.triggers[signaltype][i] = re.compile(trigger)
 
-    def run(self, *args, **kwargs):
-        raise NotImplementedError()
-
     def __str__(self):
         return '<CassiumPlugin %s>' % self.__class____name__
 
