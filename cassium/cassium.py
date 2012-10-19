@@ -108,26 +108,68 @@ class Cassium(IRCClient):
             self.join(channel)
 
     def privmsg(self, user, channel, message):
-        """Called upon receipt of a message from a user or channel."""
+        """Called when a user sends a message to the bot or a channel."""
         # See the comment in Query on ValueError
         try:
-            query = Query(config, user, channel, message)
+            query = Query(config, 'msg', user=user, channel=channel,
+                message=message)
         except ValueError:
             return
-        response = Response(user, channel)
+        # "channel or user" is needed to handle private messages to the bot
+        self.signal(query, Response(channel or user))
+
+    def userJoined(self, user, channel):
+        """Called when a user joins a channel."""
+        query = Query(config, 'join', user=user, channel=channel)
+        self.signal(query, Response(channel))
+
+    def userLeft(self, user, channel):
+        """Called when a user leaves a channel."""
+        query = Query(config, 'leave', user=user, channel=channel)
+        self.signal(query, Response(channel))
+
+    def userQuit(self, user, message):
+        """Called when a user quits the server."""
+        query = Query(config, 'quit', user=user, message=message)
+        self.signal(query, Response(None))
+
+    def userKicked(self, user, channel):
+        """Called when a user is kicked from a channel."""
+        query = Query(config, 'kick', user=user, channel=channel)
+        self.signal(query, Response(channel))
+
+    def action(self, user, channel, message):
+        """Called when a user performs an action."""
+        query = Query(config, 'action', user=user, channel=channel,
+            message=message)
+        # TODO: determine whether IRCClient supports private message actions
+        self.signal(query, Response(channel or user))
+
+    def topicUpdated(self, user, channel, topic):
+        """Called when a channel's topic is updated."""
+        query = Query(config, 'topic', user=user, channel=channel, topic=topic)
+        self.signal(query, Response(channel))
+
+    def userRenamed(self, oldname, newname):
+        """Called when a user changes their nickname."""
+        query = Query(config, 'nick', oldname=oldname, newname=newname)
+        self.signal(query, Response(newname))
+
+    def signal(self, query, response):
+        # Convenience
+        signaltype = query._type
         try:
-            # Check builtin triggers
-            for plugin in self.builtin_plugins:
-                for trigger in plugin.triggers:
-                    if re.match(trigger, message):
-                        # Note that builtin plugins receive 'self'
-                        # instead of 'response' and also return immediately
-                        return plugin.run(query, self)
-            # Check each plugin's triggers
-            for plugin in self.plugins:
-                for trigger in plugin.triggers:
-                    if re.match(trigger, message):
-                        plugin.run(query, response)
+            # Check each plugin for an appropriate signal handler
+            for plugin in self.plugins + self.builtin_plugins:
+                if hasattr(plugin, signaltype):
+                    # Ensure the attribute we're looking at is a method
+                    if hasattr(getattr(plugin, signaltype), '__call__'):
+                        method = getattr(plugin, signaltype)
+                        # If this is a builtin plugin, pass it Cassium
+                        if plugin in self.builtin_plugins:
+                            method(query, self)
+                        else:
+                            method(query, response)
             # Process dict-based responses
             for channel_and_name, reason in response._kick.iteritems():
                 self.kick(*channel_and_name + (reason,))
@@ -137,27 +179,28 @@ class Cassium(IRCClient):
             if response._nick:
                 self.setNick(response._nick)
             # Process list- and set-based responses
-            for response_type in ('join', 'leave', 'mode', 'notice', 'me', 'msg'):
-                # i.e. for action in response._msg:
-                for action in getattr(response, '_' + response_type):
-                    # unicode fix (might be necessary for other response types?)
-                    if response_type == 'msg':
+            for responsetype in ('join', 'leave', 'mode', 'notice', 'me', 'msg'):
+                # e.g. for action in response._msg:
+                for action in getattr(response, '_' + responsetype):
+                    # Unicode fix
+                    # XXX: might be necessary for other response types?
+                    if responsetype == 'msg':
                         action = (action[0], action[1].encode('UTF-8'))
-                    # i.e. self.msg(*action)
-                    getattr(self, response_type)(*action)
+                    # e.g. self.msg(*action)
+                    getattr(self, responsetype)(*action)
         except Exception:
-            self.msg(channel or user, traceback.format_exc().splitlines()[-1])
+            self.msg(response._defaulttarget,
+                traceback.format_exc().splitlines()[-1])
             traceback.print_exc()
             pprint.pprint(vars(response))
 
     class Control(Plugin):
         """Internal plugin used to provide admins with basic control."""
 
-        triggers = [
-            '^`(join|leave|nick|import|reconnect|restart)',
-        ]
-
-        def run(self, query, cassium):
+        def msg(self, query, cassium):
+            if not re.match(r'^`(join|leave|nick|import|reconnect|restart)',
+                    query.message):
+                return
             if query.nick not in query.config.admins:
                 return cassium.msg(query.channel or query.user,
                     'You are not permitted to use this command.')
@@ -175,7 +218,7 @@ class Cassium(IRCClient):
                 cassium.quit()
             elif query.words[0] == '`restart':
                 reactor.stop()
-                print "===== RESTARTING ====="
+                print("===== RESTARTING =====")
                 os.execvp('./run.py', sys.argv)
 
 class CassiumFactory(protocol.ClientFactory):

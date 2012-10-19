@@ -1,8 +1,9 @@
+import re
+
 from cassium.plugin import Plugin
 
 class HelloWorld(Plugin):
     
-    triggers = [r'^`hello$']
-
-    def run(self, query, response):
-        response.msg("Hello, " + ("admin " if query.nick in query.config.admins else "") + query.nick + "!")
+    def msg(self, query, response):
+        if query.message == '`hello':
+            response.msg("Hello, " + query.nick + "!")

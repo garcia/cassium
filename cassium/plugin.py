@@ -22,8 +22,9 @@ class Plugin(object):
         triggers yourself.
 
         """
-        for i, trigger in enumerate(self.triggers):
-            self.triggers[i] = re.compile(trigger)
+        for signaltype in self.triggers:
+            for i, trigger in enumerate(self.triggers[signaltype]):
+                self.triggers[signaltype][i] = re.compile(trigger)
 
     def run(self, *args, **kwargs):
         raise NotImplementedError()
@@ -46,13 +47,19 @@ class Query(object):
     
     """
 
-    def __init__(self, config, user, channel, message):
-        # Raises ValueError on server messages (user string has no '!')
-        self._nick, self._host = user.split('!', 1)
-        self._channel = channel
-        self._message = message
-        self._words = message.split(' ')
+    def __init__(self, config, signaltype, **kwargs):
         self._config = config
+        self._type = signaltype
+        for k, v in kwargs.items():
+            # Translates to e.g. self._message = kwargs['message']
+            setattr(self, '_' + k, v)
+            if k == 'message':
+                self._words = v.split(' ')
+            elif k == 'user':
+                try:
+                    self._nick, self._host = v.split('!', 1)
+                except:
+                    self._nick = v
 
     @property
     def nick(self): return self._nick
@@ -82,8 +89,8 @@ class Response(object):
 
     """
 
-    def __init__(self, user, channel):
-        self._defaulttarget = channel or user
+    def __init__(self, defaulttarget):
+        self._defaulttarget = defaulttarget
 
         # Initialize response values
         self._msg = []      # Duplicate messages permitted
