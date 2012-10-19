@@ -4,27 +4,7 @@ import re
 __all__ = ['Plugin', 'Query', 'Response']
 
 class Plugin(object):
-    """The base class for all Cassium plugins.
-
-    Subclasses must override the run() method. __init__ may also be overridden
-    if necessary, but it would be advisable to call the superclass's __init__
-    as well.
-
-    """
-
-    triggers = []
-
-    def __init__(self):
-        """Initialize the plugin.
-
-        This automatically compiles all trigger regular expressions. If you
-        modify the trigger list at runtime, you'll want to compile any new
-        triggers yourself.
-
-        """
-        for signaltype in self.triggers:
-            for i, trigger in enumerate(self.triggers[signaltype]):
-                self.triggers[signaltype][i] = re.compile(trigger)
+    """The base class for all Cassium plugins."""
 
     def __str__(self):
         return '<CassiumPlugin %s>' % self.__class____name__
