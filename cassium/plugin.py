@@ -5,6 +5,7 @@ __all__ = ['Plugin', 'Query', 'Response']
 
 class Plugin(object):
     """The base class for all Cassium plugins."""
+    # TODO: detailed documentation of signals
 
     def __str__(self):
         return '<CassiumPlugin %s>' % self.__class____name__
@@ -24,8 +25,8 @@ class Query(object):
     
     """
 
-    def __init__(self, config, signaltype, **kwargs):
-        self.config = config
+    def __init__(self, channels, signaltype, **kwargs):
+        self.channels = frozenset(channels)
         self.type = signaltype
         for k, v in kwargs.items():
             # Translates to e.g. self.message = kwargs['message']
