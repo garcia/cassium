@@ -27,6 +27,7 @@ except ImportError:
 # Do not expose imported modules
 __all__ = ['Cassium', 'CassiumFactory']
 
+# TODO: use an actual logger instead of printing to stdout
 class Cassium(IRCClient):
     """Cassium's main class."""
 
@@ -48,9 +49,10 @@ class Cassium(IRCClient):
         self.realname = config.realname
         self.username = 'A Cassium IRC Bot'
         self.versionName = 'Cassium'
+        self.channels = set()
         # Import plugins
         self.load_plugins_recursively('plugins/')
-        self.builtin_plugins = [Cassium.Control()]
+        self.builtin_plugins = [Control()]
     
     def load_plugins_recursively(self, directory):
         """Recursively loads or reloads all plugins in the given directory."""
@@ -85,7 +87,7 @@ class Cassium(IRCClient):
                 loaded_nothing = False
                 self.load_plugin(plugin=this_attr())
         if loaded_nothing:
-            print('Warning: no plugins were found in the module ' + path)
+            print('WARNING: no plugins were found in the module ' + path)
 
     def load_plugin(self, plugin):
         """Loads or reloads a plugin instance."""
@@ -100,64 +102,105 @@ class Cassium(IRCClient):
         self.plugins.append(plugin)
         print('Imported ' + name)
 
+    def add_channel(self, channel):
+        self.channels.add(channel)
+
+    def remove_channel(self, channel):
+        try:
+            self.channels.remove(channel)
+        except KeyError:
+            print("WARNING: attempted to remove a channel I hadn't joined")
+
     def signedOn(self):
-        """Called upon successfully connecting to the IRC server."""
+        """Called when Cassium successfully connects to the IRC server."""
         if hasattr(config, 'password'):
                 self.msg('NickServ', 'IDENTIFY ' + config.password)
         for channel in config.channels:
             self.join(channel)
+        self.signal(Query(self.channels, 'signedon'), Response(None))
+
+    def joined(self, channel):
+        """Called when Cassium joins a channel."""
+        self.add_channel(channel)
+        query = Query(self.channels, 'ijoin', channel=channel)
+        self.signal(query, Response(channel))
+
+    def left(self, channel):
+        """Called when Cassium leaves a channel."""
+        self.remove_channel(channel)
+        query = Query(self.channels, 'ileft', channel=channel)
+        self.signal(query, Response(None))
+
+    def kickedFrom(self, channel, kicker, message):
+        """Called when Cassium is kicked from a channel."""
+        self.remove_channel(channel)
+        query = Query(self.channels, 'ikick', channel=channel, user=kicker,
+            message=message)
+        self.signal(query, Response(kicker))
+
+    def nickChanged(self, nick):
+        """Called when Cassium's nickname is changed."""
+        query = Query(self.channels, 'inick', oldname=self.nickname,
+            newname=nick)
+        self.nickname = nick
+        self.signal(query, Response(None))
 
     def privmsg(self, user, channel, message):
-        """Called when a user sends a message to the bot or a channel."""
+        """Called when a user sends a message to Cassium or a channel."""
         # See the comment in Query on ValueError
         try:
-            query = Query(config, 'msg', user=user, channel=channel,
+            query = Query(self.channels, 'msg', user=user, channel=channel,
                 message=message)
         except ValueError:
             return
-        # "channel or user" is needed to handle private messages to the bot
-        self.signal(query, Response(channel or user))
+        # Handles private messages
+        target = query.nick
+        if any(c in channel for c in '#&'):
+            target = channel
+        self.signal(query, Response(target))
 
     def userJoined(self, user, channel):
         """Called when a user joins a channel."""
-        query = Query(config, 'join', user=user, channel=channel)
+        query = Query(self.channels, 'join', user=user, channel=channel)
         self.signal(query, Response(channel))
 
     def userLeft(self, user, channel):
         """Called when a user leaves a channel."""
-        query = Query(config, 'leave', user=user, channel=channel)
+        query = Query(self.channels, 'leave', user=user, channel=channel)
         self.signal(query, Response(channel))
 
     def userQuit(self, user, message):
         """Called when a user quits the server."""
-        query = Query(config, 'quit', user=user, message=message)
+        query = Query(self.channels, 'quit', user=user, message=message)
         self.signal(query, Response(None))
 
-    def userKicked(self, user, channel):
+    def userKicked(self, kickee, channel, kicker, message):
         """Called when a user is kicked from a channel."""
-        query = Query(config, 'kick', user=user, channel=channel)
+        query = Query(self.channels, 'kick', kickee=kickee, channel=channel,
+            kicker=kicker, message=message)
         self.signal(query, Response(channel))
 
     def action(self, user, channel, message):
         """Called when a user performs an action."""
-        query = Query(config, 'action', user=user, channel=channel,
+        query = Query(self.channels, 'action', user=user, channel=channel,
             message=message)
         # TODO: determine whether IRCClient supports private message actions
         self.signal(query, Response(channel or user))
 
     def topicUpdated(self, user, channel, topic):
         """Called when a channel's topic is updated."""
-        query = Query(config, 'topic', user=user, channel=channel, topic=topic)
+        query = Query(self.channels, 'topic', user=user, channel=channel,
+            topic=topic)
         self.signal(query, Response(channel))
 
     def userRenamed(self, oldname, newname):
         """Called when a user changes their nickname."""
-        query = Query(config, 'nick', oldname=oldname, newname=newname)
+        query = Query(self.channels, 'nick', oldname=oldname, newname=newname)
         self.signal(query, Response(newname))
 
     def signal(self, query, response):
         # Convenience
-        signaltype = query._type
+        signaltype = query.type
         try:
             # Check each plugin for an appropriate signal handler
             for plugin in self.plugins + self.builtin_plugins:
@@ -194,32 +237,33 @@ class Cassium(IRCClient):
             traceback.print_exc()
             pprint.pprint(vars(response))
 
-    class Control(Plugin):
-        """Internal plugin used to provide admins with basic control."""
+class Control(Plugin):
+    """Internal plugin used to provide admins with basic control."""
 
-        def msg(self, query, cassium):
-            if not re.match(r'^`(join|leave|nick|import|reconnect|restart)',
-                    query.message):
-                return
-            if query.nick not in query.config.admins:
-                return cassium.msg(query.channel or query.user,
-                    'You are not permitted to use this command.')
-            if query.words[0] == '`join':
-                cassium.join(query.words[1])
-            elif query.words[0] == '`leave':
-                cassium.leave(query.words[1])
-            elif query.words[0] == '`nick':
-                cassium.setNick(query.words[1])
-            elif query.words[0] == '`import':
-                cassium.load_plugins_from_path('plugins.' + query.words[1])
-                cassium.msg(query.channel or query.user,
-                    'Loaded ' + query.words[1] + '.')
-            elif query.words[0] == '`reconnect':
-                cassium.quit()
-            elif query.words[0] == '`restart':
-                reactor.stop()
-                print("===== RESTARTING =====")
-                os.execvp('./run.py', sys.argv)
+    def msg(self, query, cassium):
+        global config
+        if not re.match(r'^`(join|leave|nick|import|reconnect|restart)',
+                query.message):
+            return
+        if query.nick not in config.admins:
+            return cassium.msg(query.channel or query.user,
+                'You are not permitted to use this command.')
+        if query.words[0] == '`join':
+            cassium.join(query.words[1])
+        elif query.words[0] == '`leave':
+            cassium.leave(query.words[1])
+        elif query.words[0] == '`nick':
+            cassium.setNick(query.words[1])
+        elif query.words[0] == '`import':
+            cassium.load_plugins_from_path('plugins.' + query.words[1])
+            cassium.msg(query.channel or query.user,
+                'Loaded ' + query.words[1] + '.')
+        elif query.words[0] == '`reconnect':
+            cassium.quit()
+        elif query.words[0] == '`restart':
+            reactor.stop()
+            print("===== RESTARTING =====")
+            os.execvp('./run.py', sys.argv)
 
 class CassiumFactory(protocol.ClientFactory):
     """A Twisted factory that instantiates or reinstantiates Cassium."""
