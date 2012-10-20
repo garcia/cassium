@@ -2,42 +2,59 @@ from cassium.plugin import Plugin
 
 class Log(Plugin):
     
-    # TODO: ijoin, ileft, etc.
+    def _log(self, channel, string):
+        if channel: channel += ': '
+        print channel.ljust(16) + '-*- ' + string
 
-    def log(self, channel, string):
+    def _logmsg(self, channel, string):
         print (channel + ': ').ljust(16) + string
+    
+    def signedon(self, query, response):
+        self._log('', 'Signed on')
+
+    def ijoin(self, query, response):
+        self._log(query.channel, 'Joined %s' % (query.channel))
+
+    def ileft(self, query, response):
+        self._log(query.channel, 'Left %s' % (query.channel))
+
+    def ikick(self, query, response):
+        self._log(query.channel,
+            'Kicked from %s by %s (%s)' %
+            (query.channel, query.kicker, query.message))
+
+    def inick(self, query, response):
+        self.nick(query, response)
 
     def join(self, query, response):
-        self.log(query.channel,
-            '-*- %s joined %s' % (query.user, query.channel))
+        self._log(query.channel,
+            '%s joined %s' % (query.user, query.channel))
 
     def leave(self, query, response):
-        self.log(query.channel,
-            '-*- %s left %s' % (query.user, query.channel))
+        self._log(query.channel,
+            '%s left %s' % (query.user, query.channel))
 
     def quit(self, query, response):
-        for channel in query.channels:
-            self.log(channel,
-                '-*- %s quit (%s)' % (query.user, query.message))
+        self._log('',
+            '%s quit (%s)' % (query.user, query.message))
 
     def kick(self, query, response):
-        self.log(query.channel,
-            '-*- %s kicked %s from %s (%s)' %
+        self._log(query.channel,
+            '%s kicked %s from %s (%s)' %
             (query.kicker, query.kickee, query.channel, query.message))
 
     def action(self, query, response):
-        self.log(query.channel,
-            '-*- %s %s' % (query.user, query.message))
+        self._log(query.channel,
+            '%s %s' % (query.user, query.message))
 
     def topic(self, query, response):
-        self.log(query.channel,
-            '-*- %s set %s\'s topic to: %s' %
+        self._log(query.channel,
+            '%s set %s\'s topic to: %s' %
             (query.user, query.channel, query.topic))
 
     def nick(self, query, response):
-        for channel in query.channels:
-            self.log(channel,
-                '-*- %s is now known as %s' % (query.oldname, query.newname))
+        self._log('',
+            '%s is now known as %s' % (query.oldname, query.newname))
 
     def msg(self, query, response):
-        self.log(query.channel, '<%s> %s' % (query.nick, query.message))
+        self._logmsg(query.channel, '<%s> %s' % (query.nick, query.message))
