@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import glob
+import logging
 import os
 import pprint
 import re
@@ -24,7 +25,6 @@ try:
 except ImportError:
     config = None
 
-# Do not expose imported modules
 __all__ = ['Cassium', 'CassiumFactory']
 
 # TODO: use an actual logger instead of printing to stdout
@@ -44,6 +44,10 @@ class Cassium(IRCClient):
         # Config must be given if the import above failed
         if config_: config = config_
         elif not config: raise AttributeError('no configuration found')
+        # Set up logging
+        log = logging.getLogger('cassium')
+        log.setLevel(getattr(logging, config.verbosity))
+        log.addHandler(logging.StreamHandler())
         # Set up for IRC
         self.nickname = config.nick
         self.realname = config.realname
@@ -199,6 +203,9 @@ class Cassium(IRCClient):
         self.signal(query, Response(newname))
 
     def signal(self, query, response):
+        # Don't respond to *Serv
+        if hasattr(query, 'nick') and query.nick.endswith('Serv'):
+            return
         # Convenience
         signaltype = query.type
         try:
@@ -240,27 +247,30 @@ class Cassium(IRCClient):
 class Control(Plugin):
     """Internal plugin used to provide admins with basic control."""
 
+    controls = ('join', 'leave', 'nick', 'import', 'reconnect', 'restart')
+
     def msg(self, query, cassium):
         global config
-        if not re.match(r'^`(join|leave|nick|import|reconnect|restart)',
-                query.message):
+        if not any(query.startswith('`' + ctl) for ctl in controls):
             return
+        # TODO: better authentication
         if query.nick not in config.admins:
             return cassium.msg(query.channel or query.user,
                 'You are not permitted to use this command.')
-        if query.words[0] == '`join':
+        command = query.words[0][1:]
+        if command == 'join':
             cassium.join(query.words[1])
-        elif query.words[0] == '`leave':
+        elif command == 'leave':
             cassium.leave(query.words[1])
-        elif query.words[0] == '`nick':
+        elif command == 'nick':
             cassium.setNick(query.words[1])
-        elif query.words[0] == '`import':
+        elif command == 'import':
             cassium.load_plugins_from_path('plugins.' + query.words[1])
             cassium.msg(query.channel or query.user,
                 'Loaded ' + query.words[1] + '.')
-        elif query.words[0] == '`reconnect':
+        elif command == 'reconnect':
             cassium.quit()
-        elif query.words[0] == '`restart':
+        elif command == 'restart':
             reactor.stop()
             print("===== RESTARTING =====")
             os.execvp('./run.py', sys.argv)
