@@ -1,3 +1,4 @@
+verbosity = 'INFO'
 server = 'irc.example.com'
 port = 6667
 nick = 'Cassium'
