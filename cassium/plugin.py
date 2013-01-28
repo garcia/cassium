@@ -8,7 +8,7 @@ class Plugin(object):
     # TODO: detailed documentation of signals
 
     def __str__(self):
-        return '<CassiumPlugin %s>' % self.__class____name__
+        return '<CassiumPlugin %s>' % self.__class__.__name__
 
 
 class Query(object):
