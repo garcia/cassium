@@ -1,14 +1,40 @@
+import os
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import re
 
 # Do not expose imported modules
 __all__ = ['Plugin', 'Query', 'Response']
 
+# TODO: documentation
+
 class Plugin(object):
     """The base class for all Cassium plugins."""
-    # TODO: detailed documentation of signals
+
+    def __init__(self):
+        self.load()
+
+    def fqn(self):
+        return self.__class__.__module__ + '.' + self.__class__.__name__
+
+    def savefile(self):
+        return os.path.join('save', self.fqn() + '.pck')
+
+    def load(self):
+        savefile = self.savefile()
+        if os.path.isfile(savefile):
+            with open(savefile, 'r') as sf:
+                self.__dict__.update(pickle.load(sf))
+
+    def save(self):
+        savefile = self.savefile()
+        with open(savefile, 'w') as sf:
+            pickle.dump(self.__dict__, sf)
 
     def __str__(self):
-        return '<CassiumPlugin %s>' % self.__class__.__name__
+        return '<Plugin %s>' % self.__class__.__name__
 
 
 class Query(object):
