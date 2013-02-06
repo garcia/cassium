@@ -18,12 +18,6 @@ from twisted.words.protocols.irc import IRCClient
 
 from plugin import *
 
-# Attempt to get configuration from the current directory
-try:
-    import config
-except ImportError:
-    config = None
-
 __all__ = ['Cassium', 'CassiumFactory']
 
 # TODO: use an actual logger instead of printing to stdout
@@ -31,18 +25,11 @@ class Cassium(IRCClient):
     """Cassium's main class."""
 
     plugins = []
+    config = None
 
-    def __init__(self, config_=None):
-        """Initialize Cassium.
-        
-        If there is no configuration module in the current working directory,
-        one must be passed as the sole argument to the constructor.
-
-        """
-        global config
-        # Config must be given if the import above failed
-        if config_: config = config_
-        elif not config: raise AttributeError('no configuration found')
+    def __init__(self, config):
+        """Initialize Cassium with a configuration module."""
+        self.config = config
         # Set up logging
         log = logging.getLogger('cassium')
         log.setLevel(getattr(logging, config.verbosity))
@@ -121,9 +108,9 @@ class Cassium(IRCClient):
 
     def signedOn(self):
         """Called when Cassium successfully connects to the IRC server."""
-        if hasattr(config, 'password'):
-                self.msg('NickServ', 'IDENTIFY ' + config.password)
-        for channel in config.channels:
+        if hasattr(self.config, 'password'):
+                self.msg('NickServ', 'IDENTIFY ' + self.config.password)
+        for channel in self.config.channels:
             self.join(channel)
         self.signal(Query(self.channels, 'signedon'), Response(None))
 
@@ -260,11 +247,10 @@ class Control(Plugin):
     controls = ('join', 'leave', 'nick', 'import', 'reconnect', 'restart', 'save')
 
     def msg(self, query, cassium):
-        global config
         if not any(query.message.startswith('`' + ctl) for ctl in self.controls):
             return
         # TODO: better authentication
-        if query.nick not in config.admins:
+        if query.nick not in cassium.config.admins:
             return cassium.msg(query.channel or query.user,
                 'You are not permitted to use this command.')
         command = query.words[0][1:]
@@ -292,8 +278,11 @@ class Control(Plugin):
 class CassiumFactory(protocol.ClientFactory):
     """A Twisted factory that instantiates or reinstantiates Cassium."""
 
+    def __init__(self, config):
+        self.config = config
+
     def buildProtocol(self, addr):
-        cassium = Cassium()
+        cassium = Cassium(self.config)
         cassium.factory = self
         return cassium
 

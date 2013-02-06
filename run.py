@@ -5,9 +5,10 @@ import sys
 from twisted.internet import reactor
 
 from cassium.cassium import Cassium, CassiumFactory
+import config
 
 def main():
-    factory = CassiumFactory()
+    factory = CassiumFactory(config)
     reactor.connectTCP('localhost', 6667, factory)
     reactor.run()
 
