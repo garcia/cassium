@@ -98,9 +98,9 @@ class Response(object):
         self._kick = {}     # Only one user kick per channel
         self._topic = {}    # Same idea as _kick
         self._mode = []     # Too complex to restrict meaningfully
-        self._notice = []   # Same idea as _messages
+        self._notice = []   # Same idea as _msg
         self._nick = None   # You're either changing it or you're not
-        self._me = []       # Same idea as _messages
+        self._me = []       # Same idea as _msg
 
     def _target(self, target):
         return target or self._defaulttarget
