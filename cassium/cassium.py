@@ -16,7 +16,6 @@ except ImportError:
 from twisted.internet import protocol, reactor
 from twisted.words.protocols.irc import IRCClient
 
-# Why isn't this particular import relative to run.py's cwd?
 from plugin import *
 
 # Attempt to get configuration from the current directory
@@ -208,6 +207,7 @@ class Cassium(IRCClient):
         self.signal(query, Response(newname))
 
     def signal(self, query, response):
+        """Called by the above signals to relay the event to each Plugin."""
         # Don't respond to *Serv
         if hasattr(query, 'nick') and query.nick.endswith('Serv'):
             return
@@ -250,6 +250,7 @@ class Cassium(IRCClient):
             pprint.pprint(vars(response))
 
     def save(self):
+        """Calls each Plugin's save() method."""
         for plugin in self.plugins:
             plugin.save()
 
