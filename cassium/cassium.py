@@ -55,19 +55,24 @@ class Cassium(IRCClient):
         self.versionName = 'Cassium'
         self.channels = set()
         # Import plugins
-        self.load_plugins_recursively('plugins/')
+        self.load_plugins_recursively('plugins')
         self.builtin_plugins = [Control()]
     
     def load_plugins_recursively(self, directory):
         """Recursively loads or reloads all plugins in the given directory."""
         plugins = []
-        for node in sorted(glob.iglob(directory + '*')):
+        # Sorting is only done for the sake of a predictable loading order
+        for node in sorted(glob.iglob(os.path.join(directory, '*'))):
+            # Recurse into directories
             if os.path.isdir(node):
-                self.load_plugins_recursively(node + '/')
-            elif node.endswith('.py') and '__init__' not in node:
-                # Convert filesystem path to dot-delimited path
-                path = os.path.splitext(node)[0].replace(os.path.sep, '.')
-                self.load_plugins_from_path(path)
+                self.load_plugins_recursively(node)
+            # Load plugins found in files
+            elif node.endswith('.py'):
+                # Don't load __init__.py
+                if os.path.split(node)[1] != '__init__.py':
+                    # Convert filesystem path to dot-delimited path
+                    path = os.path.splitext(node)[0].replace(os.path.sep, '.')
+                    self.load_plugins_from_path(path)
 
     def load_plugins_from_path(self, path):
         """Loads or reloads the plugin(s) at the given path.
@@ -95,10 +100,10 @@ class Cassium(IRCClient):
 
     def load_plugin(self, plugin):
         """Loads or reloads a plugin instance."""
-        name = plugin.__class__.__name__
+        name = plugin.fqn()
         # Search for an existing copy of the plugin
         for i, existing_plugin in enumerate(self.plugins):
-            if name == existing_plugin.__class__.__name__:
+            if name == existing_plugin.fqn():
                 self.plugins[i] = plugin
                 print('Reloaded ' + name)
                 return
@@ -113,7 +118,7 @@ class Cassium(IRCClient):
         try:
             self.channels.remove(channel)
         except KeyError:
-            print("WARNING: attempted to remove a channel I hadn't joined")
+            print('WARNING: attempted to remove a channel I hadn\'t joined')
 
     def signedOn(self):
         """Called when Cassium successfully connects to the IRC server."""
@@ -244,14 +249,18 @@ class Cassium(IRCClient):
             traceback.print_exc()
             pprint.pprint(vars(response))
 
+    def save(self):
+        for plugin in self.plugins:
+            plugin.save()
+
 class Control(Plugin):
     """Internal plugin used to provide admins with basic control."""
 
-    controls = ('join', 'leave', 'nick', 'import', 'reconnect', 'restart')
+    controls = ('join', 'leave', 'nick', 'import', 'reconnect', 'restart', 'save')
 
     def msg(self, query, cassium):
         global config
-        if not any(query.startswith('`' + ctl) for ctl in controls):
+        if not any(query.message.startswith('`' + ctl) for ctl in self.controls):
             return
         # TODO: better authentication
         if query.nick not in config.admins:
@@ -268,11 +277,15 @@ class Control(Plugin):
             cassium.load_plugins_from_path('plugins.' + query.words[1])
             cassium.msg(query.channel or query.user,
                 'Loaded ' + query.words[1] + '.')
+        elif command == 'save':
+            cassium.save()
         elif command == 'reconnect':
+            cassium.save()
             cassium.quit()
         elif command == 'restart':
+            cassium.save()
             reactor.stop()
-            print("===== RESTARTING =====")
+            print('===== RESTARTING =====')
             os.execvp('./run.py', sys.argv)
 
 class CassiumFactory(protocol.ClientFactory):
