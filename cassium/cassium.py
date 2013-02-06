@@ -25,15 +25,16 @@ class Cassium(IRCClient):
     """Cassium's main class."""
 
     plugins = []
-    config = None
 
     def __init__(self, config):
         """Initialize Cassium with a configuration module."""
         self.config = config
         # Set up logging
-        log = logging.getLogger('cassium')
-        log.setLevel(getattr(logging, config.verbosity))
-        log.addHandler(logging.StreamHandler())
+        self.log = logging.getLogger('cassium')
+        self.log.setLevel(getattr(logging, config.log_verbosity))
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter(fmt=config.log_format))
+        self.log.addHandler(handler)
         # Set up for IRC
         self.nickname = config.nick
         self.realname = config.realname
@@ -82,7 +83,7 @@ class Cassium(IRCClient):
                 loaded_nothing = False
                 self.load_plugin(plugin=this_attr())
         if loaded_nothing:
-            print('WARNING: no plugins were found in the module ' + path)
+            self.log.warn('no plugins were found in the module ' + path)
 
     def load_plugin(self, plugin):
         """Loads or reloads a plugin instance."""
@@ -91,11 +92,11 @@ class Cassium(IRCClient):
         for i, existing_plugin in enumerate(self.plugins):
             if name == existing_plugin.fqn():
                 self.plugins[i] = plugin
-                print('Reloaded ' + name)
+                self.log.info('reloaded ' + name)
                 return
         # No existing copy found
         self.plugins.append(plugin)
-        print('Imported ' + name)
+        self.log.info('imported ' + name)
 
     def add_channel(self, channel):
         self.channels.add(channel)
@@ -104,7 +105,7 @@ class Cassium(IRCClient):
         try:
             self.channels.remove(channel)
         except KeyError:
-            print('WARNING: attempted to remove a channel I hadn\'t joined')
+            self.log.warn('attempted to remove a channel I hadn\'t joined')
 
     def signedOn(self):
         """Called when Cassium successfully connects to the IRC server."""
@@ -267,12 +268,13 @@ class Control(Plugin):
         elif command == 'save':
             cassium.save()
         elif command == 'reconnect':
+            cassium.log.critical('reconnecting')
             cassium.save()
             cassium.quit()
         elif command == 'restart':
+            cassium.log.critical('restarting')
             cassium.save()
             reactor.stop()
-            print('===== RESTARTING =====')
             os.execvp('./run.py', sys.argv)
 
 class CassiumFactory(protocol.ClientFactory):

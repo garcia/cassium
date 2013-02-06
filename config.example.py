@@ -1,4 +1,6 @@
-verbosity = 'INFO'
+log_verbosity = 'INFO'
+log_format = '%(asctime)s [%(levelname)s] %(message)s'
+
 server = 'irc.example.com'
 port = 6667
 nick = 'Cassium'
