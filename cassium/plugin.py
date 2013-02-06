@@ -17,7 +17,7 @@ class Plugin(object):
         self.load()
 
     def fqn(self):
-        """Gets the Plugin's fully qualified name.
+        """Gets the plugin's fully qualified name.
         
         This is the class's module and name joined by a dot.
         
@@ -25,22 +25,22 @@ class Plugin(object):
         return self.__class__.__module__ + '.' + self.__class__.__name__
 
     def savefile(self):
-        """Gets the path to the Plugin's save file."""
+        """Gets the path to the plugin's save file."""
         return os.path.join('save', self.fqn() + '.pck')
 
     def load(self):
-        """Loads the Plugin's data from its savefile."""
+        """Loads the plugin's data from its savefile."""
         savefile = self.savefile()
         if os.path.isfile(savefile):
             with open(savefile, 'r') as sf:
                 self.__dict__.update(pickle.load(sf))
 
     def save(self):
-        """Saves the Plugin's data to its savefile.
+        """Saves the plugin's data to its savefile.
         
         This method is called when Cassium reconnects or restarts. To disable
-        data persistence for a Plugin, give it a save() method that does
-        nothing. (You may also wish to override load() if the Plugin has
+        data persistence for a plugin, give it a save() method that does
+        nothing. (You may also wish to override load() if the plugin has
         saved its data before.)
         
         """

@@ -191,7 +191,7 @@ class Cassium(IRCClient):
         self.signal(query, Response(newname))
 
     def signal(self, query, response):
-        """Called by the above signals to relay the event to each Plugin."""
+        """Called by the above signals to relay the event to each plugin."""
         # Don't respond to *Serv
         if hasattr(query, 'nick') and query.nick.endswith('Serv'):
             return
@@ -237,7 +237,7 @@ class Cassium(IRCClient):
             pprint.pprint(vars(response), stream=sys.stderr)
 
     def save(self):
-        """Calls each Plugin's save() method."""
+        """Calls each plugin's save() method."""
         for plugin in self.plugins:
             plugin.save()
 
