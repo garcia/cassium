@@ -1,5 +1,5 @@
 log_verbosity = 'INFO'
-log_format = '%(asctime)s [%(levelname)s] %(message)s'
+log_format = '%(name)s: [%(levelname)s] %(message)s'
 
 server = 'irc.example.com'
 port = 6667

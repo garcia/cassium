@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import glob
 import logging
 import os
@@ -24,10 +22,10 @@ __all__ = ['Cassium', 'CassiumFactory']
 class Cassium(IRCClient):
     """Cassium's main class."""
 
-    def __init__(self, config, log):
+    def __init__(self, config):
         """Initialize Cassium with a configuration module."""
         self.config = config
-        self.log = log
+        self.log = logging.getLogger(__name__)
         # Set up for IRC
         self.nickname = config.nick
         self.realname = config.realname
@@ -84,6 +82,8 @@ class Cassium(IRCClient):
     def load_plugin(self, plugin):
         """Loads or reloads a plugin instance."""
         name = plugin.fqn()
+        # Insert logger into plugin
+        plugin.log = logging.getLogger(name)
         # Search for an existing copy of the plugin
         for i, existing_plugin in enumerate(self.plugins):
             if name == existing_plugin.fqn():
@@ -209,6 +209,9 @@ class Cassium(IRCClient):
                             method(query, self)
                         else:
                             method(query, response)
+            # Print log messages
+            for message in response._log:
+                self.log.info(message)
             # Process dict-based responses
             for channel_and_name, reason in response._kick.iteritems():
                 self.kick(*channel_and_name + (reason,))
@@ -279,15 +282,15 @@ class CassiumFactory(protocol.ClientFactory):
     def __init__(self, config):
         self.config = config
         # Set up logging
-        self.log = logging.getLogger(__name__)
-        self.log.setLevel(getattr(logging, config.log_verbosity))
+        logger = logging.getLogger()
+        logger.setLevel(getattr(logging, config.log_verbosity))
         handler = logging.StreamHandler()
         handler.setFormatter(logging.Formatter(fmt=config.log_format))
-        self.log.addHandler(handler)
+        logger.addHandler(handler)
 
 
     def buildProtocol(self, addr):
-        cassium = Cassium(self.config, self.log)
+        cassium = Cassium(self.config)
         cassium.factory = self
         return cassium
 

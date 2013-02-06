@@ -11,6 +11,8 @@ __all__ = ['Plugin', 'Query', 'Response']
 class Plugin(object):
     """The base class for all Cassium plugins."""
 
+    log = None
+
     def __init__(self):
         self.load()
 
@@ -44,7 +46,9 @@ class Plugin(object):
         """
         savefile = self.savefile()
         with open(savefile, 'w') as sf:
-            pickle.dump(self.__dict__, sf)
+            dictdump = self.__dict__.copy()
+            del dictdump['log']
+            pickle.dump(dictdump, sf)
 
     def __str__(self):
         return '<Plugin %s>' % self.__class__.__name__
@@ -101,6 +105,7 @@ class Response(object):
         self._notice = []   # Same idea as _msg
         self._nick = None   # You're either changing it or you're not
         self._me = []       # Same idea as _msg
+        self._log = []      # Same idea as _msg
 
     def _target(self, target):
         return target or self._defaulttarget
@@ -150,3 +155,7 @@ class Response(object):
     def me(self, channel, action):
         """Send an action ("/me" command) to a channel."""
         self._me.append((channel, action))
+
+    def log(self, msg):
+        """Log a message to the console."""
+        self._log.append(msg)

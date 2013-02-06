@@ -1,13 +1,15 @@
+import logging
+
 from cassium.plugin import Plugin
 
 class Log(Plugin):
     
     def _log(self, channel, string):
         if channel: channel += ': '
-        print channel.ljust(16) + '-*- ' + string
+        self.log.info(channel.rjust(16) + '-*- ' + string)
 
     def _logmsg(self, channel, string):
-        print (channel + ': ').ljust(16) + string
+        self.log.info((channel + ': ').rjust(16) + string)
     
     def signedon(self, query, response):
         self._log('', 'Signed on')
