@@ -24,17 +24,10 @@ __all__ = ['Cassium', 'CassiumFactory']
 class Cassium(IRCClient):
     """Cassium's main class."""
 
-    plugins = []
-
-    def __init__(self, config):
+    def __init__(self, config, log):
         """Initialize Cassium with a configuration module."""
         self.config = config
-        # Set up logging
-        self.log = logging.getLogger('cassium')
-        self.log.setLevel(getattr(logging, config.log_verbosity))
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter(fmt=config.log_format))
-        self.log.addHandler(handler)
+        self.log = log
         # Set up for IRC
         self.nickname = config.nick
         self.realname = config.realname
@@ -42,13 +35,16 @@ class Cassium(IRCClient):
         self.versionName = 'Cassium'
         self.channels = set()
         # Import plugins
+        self.plugins = []
         self.load_plugins_recursively('plugins')
         self.builtin_plugins = [Control()]
     
     def load_plugins_recursively(self, directory):
-        """Recursively loads or reloads all plugins in the given directory."""
-        plugins = []
-        # Sorting is only done for the sake of a predictable loading order
+        """Recursively loads or reloads all plugins in the given directory.
+        
+        The plugins are always loaded in alphabetical order.
+        
+        """
         for node in sorted(glob.iglob(os.path.join(directory, '*'))):
             # Recurse into directories
             if os.path.isdir(node):
@@ -235,7 +231,7 @@ class Cassium(IRCClient):
             self.msg(response._defaulttarget,
                 traceback.format_exc().splitlines()[-1])
             traceback.print_exc()
-            pprint.pprint(vars(response))
+            pprint.pprint(vars(response), stream=sys.stderr)
 
     def save(self):
         """Calls each Plugin's save() method."""
@@ -275,16 +271,23 @@ class Control(Plugin):
             cassium.log.critical('restarting')
             cassium.save()
             reactor.stop()
-            os.execvp('./run.py', sys.argv)
+            os.execv(sys.argv[0], sys.argv)
 
 class CassiumFactory(protocol.ClientFactory):
     """A Twisted factory that instantiates or reinstantiates Cassium."""
 
     def __init__(self, config):
         self.config = config
+        # Set up logging
+        self.log = logging.getLogger(__name__)
+        self.log.setLevel(getattr(logging, config.log_verbosity))
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter(fmt=config.log_format))
+        self.log.addHandler(handler)
+
 
     def buildProtocol(self, addr):
-        cassium = Cassium(self.config)
+        cassium = Cassium(self.config, self.log)
         cassium.factory = self
         return cassium
 
