@@ -18,7 +18,6 @@ from plugin import *
 
 __all__ = ['Cassium', 'CassiumFactory']
 
-# TODO: use an actual logger instead of printing to stdout
 class Cassium(IRCClient):
     """Cassium's main class."""
 
