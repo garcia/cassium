@@ -6,7 +6,7 @@ except ImportError:
 import re
 
 # Do not expose imported modules
-__all__ = ['Plugin', 'Query', 'Response']
+__all__ = ['Plugin', 'DisabledPlugin', 'Query', 'Response']
 
 class Plugin(object):
     """The base class for all Cassium plugins."""
@@ -52,6 +52,10 @@ class Plugin(object):
 
     def __str__(self):
         return '<Plugin %s>' % self.__class__.__name__
+
+
+class DisabledPlugin(object):
+    """A dummy class to make disabling plugins a simple task."""
 
 
 class Query(object):
