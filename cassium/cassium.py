@@ -4,6 +4,7 @@ import os
 import pprint
 import re
 import sys
+from threading import Timer
 import traceback
 from inspect import isclass
 try:
@@ -12,6 +13,7 @@ except ImportError:
     import pickle
 
 from twisted.internet import protocol, reactor
+from twisted.internet.task import LoopingCall
 from twisted.words.protocols.irc import IRCClient
 
 from plugin import *
@@ -35,6 +37,9 @@ class Cassium(IRCClient):
         self.plugins = []
         self.load_plugins_recursively('plugins')
         self.builtin_plugins = [Control()]
+        # Start ticking
+        tick_timer = LoopingCall(self.tick)
+        tick_timer.start(10.)
     
     def load_plugins_recursively(self, directory):
         """Recursively loads or reloads all plugins in the given directory.
@@ -188,6 +193,9 @@ class Cassium(IRCClient):
         """Called when a user changes their nickname."""
         query = Query(self.channels, 'nick', oldname=oldname, newname=newname)
         self.signal(query, Response(newname))
+
+    def tick(self):
+        self.signal(Query(self.channels, 'tick'), Response(None))
 
     def signal(self, query, response):
         """Called by the above signals to relay the event to each plugin."""
