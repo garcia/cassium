@@ -42,10 +42,10 @@ class Cassium(IRCClient):
         tick_timer.start(10.)
     
     def load_plugins_recursively(self, directory):
-        """Recursively loads or reloads all plugins in the given directory.
+        """
+        Recursively loads or reloads all plugins in the given directory.
         
         The plugins are always loaded in alphabetical order.
-        
         """
         for node in sorted(glob.iglob(os.path.join(directory, '*'))):
             # Recurse into directories
@@ -60,12 +60,12 @@ class Cassium(IRCClient):
                     self.load_plugins_from_path(path)
 
     def load_plugins_from_path(self, path):
-        """Loads or reloads the plugin(s) at the given path.
+        """
+        Loads or reloads the plugin(s) at the given path.
         
         If the path points to a module, all plugins in the given module are
         loaded. If the path points to a specific plugin within a module, that
         plugin is loaded on its own.
-        
         """
         this_plugin = __import__(path)
         # Navigate to the given path

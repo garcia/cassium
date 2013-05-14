@@ -17,10 +17,10 @@ class Plugin(object):
         self.load()
 
     def fqn(self):
-        """Gets the plugin's fully qualified name.
+        """
+        Gets the plugin's fully qualified name.
         
         This is the class's module and name joined by a dot.
-        
         """
         return self.__class__.__module__ + '.' + self.__class__.__name__
 
@@ -36,13 +36,13 @@ class Plugin(object):
                 self.__dict__.update(pickle.load(sf))
 
     def save(self):
-        """Saves the plugin's data to its savefile.
+        """
+        Saves the plugin's data to its savefile.
         
         This method is called when Cassium reconnects or restarts. To disable
         data persistence for a plugin, give it a save() method that does
         nothing. (You may also wish to override load() if the plugin has
         saved its data before.)
-        
         """
         savefile = self.savefile()
         with open(savefile, 'w') as sf:
@@ -59,7 +59,8 @@ class DisabledPlugin(object):
 
 
 class Query(object):
-    """An object that is passed among all triggered plugins for a message.
+    """
+    An object that is passed among all triggered plugins for a message.
     
     Query objects have the following read-only properties:
         
@@ -69,9 +70,7 @@ class Query(object):
         * message: the message string
         * words: the message as a list of space-separated words
         * config: Cassium's configuration module
-    
     """
-
     def __init__(self, channels, signaltype, **kwargs):
         self.channels = frozenset(channels)
         self.type = signaltype
@@ -88,12 +87,12 @@ class Query(object):
 
 
 class Response(object):
-    """An object that is passed among all triggered plugins for a message.
+    """
+    An object that is passed among all triggered plugins for a message.
 
     More specifically, a Response object is initialized with the message
     information and passed as an argument to each triggered plugin. The
     plugin then responds using the given methods.
-
     """
 
     def __init__(self, defaulttarget):
@@ -140,11 +139,11 @@ class Response(object):
         self._topic[channel] = topic
 
     def mode(self, channel, set_, modes, limit=None, user=None, mask=None):
-        """Set a channel's modes.
+        """
+        Set a channel's modes.
         
         For more details, see Twisted's documentation on the method:
         http://twistedmatrix.com/documents/8.2.0/api/twisted.words.protocols.irc.IRCClient.html#mode
-        
         """
         self._mode.append((channel, set_, modes, limit, user, mask))
 
